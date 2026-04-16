@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartFlow AI — Crowd Intelligence</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#1d4ed8;--primary-dark:#1e40af;--primary-light:#dbeafe;
+  --success:#15803d;--success-bg:#dcfce7;
+  --warning:#b45309;--warning-bg:#fef3c7;
+  --danger:#b91c1c;--danger-bg:#fee2e2;
+  --neutral:#374151;--neutral-light:#f9fafb;--border:#e5e7eb;
+  --radius:0.5rem;
+  --shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);
+}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f3f4f6;color:var(--neutral);line-height:1.6;min-height:100vh}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
+.skip-link{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}
+.skip-link:focus{position:fixed;top:1rem;left:1rem;width:auto;height:auto;padding:.5rem 1rem;background:var(--primary);color:#fff;border-radius:var(--radius);z-index:9999;font-weight:600}
+header{background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#2563eb 100%);color:#fff;padding:3rem 1rem 2.5rem;text-align:center}
+header h1{font-size:clamp(1.75rem,5vw,2.75rem);font-weight:800;letter-spacing:-.025em;margin-bottom:.5rem}
+header h1 span{color:#93c5fd}
+header p{font-size:1.1rem;opacity:.9;max-width:560px;margin:0 auto}
+.badge{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:9999px;padding:.25rem .75rem;font-size:.8rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:1rem}
+main{max-width:900px;margin:0 auto;padding:2rem 1rem 4rem}
+.card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);padding:1.75rem;margin-bottom:1.5rem}
+.card-title{font-size:1.1rem;font-weight:700;color:#111827;margin-bottom:1.25rem;display:flex;align-items:center;gap:.5rem}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem}
+.field{display:flex;flex-direction:column;gap:.35rem}
+label{font-size:.875rem;font-weight:600;color:#374151}
+.hint{font-size:.75rem;color:#6b7280;margin-top:.15rem}
+input,select{width:100%;padding:.55rem .75rem;border:1.5px solid var(--border);border-radius:var(--radius);font-size:.95rem;color:var(--neutral);background:#fff;transition:border-color .15s}
+input:hover,select:hover{border-color:#9ca3af}
+input:focus,select:focus{border-color:var(--primary);outline:none;box-shadow:0 0 0 3px rgba(29,78,216,.15)}
+input[type=range]{padding:0;border:none;background:transparent;cursor:pointer;accent-color:var(--primary)}
+input[type=range]:focus{box-shadow:none;outline:3px solid var(--primary);outline-offset:2px}
+.checkbox-row{display:flex;align-items:center;gap:.6rem;padding:.55rem 0}
+.checkbox-row input[type=checkbox]{width:1.1rem;height:1.1rem;accent-color:var(--primary);cursor:pointer;flex-shrink:0}
+.checkbox-row label{font-size:.95rem;font-weight:500;cursor:pointer;margin:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.7rem 1.75rem;border-radius:var(--radius);font-size:1rem;font-weight:600;cursor:pointer;border:none;transition:background .15s,transform .1s,box-shadow .15s}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--primary);color:#fff;box-shadow:var(--shadow)}
+.btn-primary:hover{background:var(--primary-dark);box-shadow:var(--shadow-md)}
+.btn-secondary{background:#fff;color:var(--primary);border:1.5px solid var(--primary)}
+.btn-secondary:hover{background:var(--primary-light)}
+.btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.btn-row{display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1.25rem}
+.spinner{display:inline-block;width:1.1rem;height:1.1rem;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.result-hidden{display:none}
+.risk-badge{display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .9rem;border-radius:9999px;font-weight:700;font-size:1rem}
+.risk-low{background:var(--success-bg);color:var(--success)}
+.risk-medium{background:var(--warning-bg);color:var(--warning)}
+.risk-high{background:var(--danger-bg);color:var(--danger)}
+.result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin:1.25rem 0;list-style:none}
+.metric{background:var(--neutral-light);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;text-align:center}
+.metric-val{font-size:1.6rem;font-weight:800;color:var(--primary);line-height:1.1}
+.metric-label{font-size:.78rem;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-top:.25rem}
+.recommendation-box{background:var(--primary-light);border-left:4px solid var(--primary);border-radius:0 var(--radius) var(--radius) 0;padding:1rem 1.25rem;margin:1rem 0;font-size:.95rem;color:#1e3a8a;font-weight:500}
+.factors-list{list-style:none;display:flex;flex-direction:column;gap:.5rem;margin-top:.75rem}
+.factors-list li{display:flex;align-items:flex-start;gap:.5rem;font-size:.9rem;color:#374151}
+.factors-list li::before{content:"•";color:var(--primary);font-weight:700;flex-shrink:0;margin-top:.05rem}
+.congestion-pill{display:inline-flex;align-items:center;gap:.35rem;padding:.2rem .65rem;border-radius:9999px;font-size:.8rem;font-weight:600}
+.congestion-yes{background:#fee2e2;color:#b91c1c}
+.congestion-no{background:#dcfce7;color:#15803d}
+.route-result{border-top:1px solid var(--border);margin-top:1.5rem;padding-top:1.5rem}
+.route-status-recommended{color:var(--success);font-weight:700}
+.route-status-no_better_option{color:var(--warning);font-weight:700}
+.route-status-clear{color:var(--primary);font-weight:700}
+.error-box{background:#fee2e2;border:1px solid #fca5a5;border-radius:var(--radius);padding:.9rem 1.1rem;color:#991b1b;font-size:.9rem;margin-top:1rem;display:flex;align-items:flex-start;gap:.5rem}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+footer{text-align:center;padding:1.5rem;color:#9ca3af;font-size:.85rem;border-top:1px solid var(--border);background:#fff}
+footer a{color:var(--primary);text-decoration:none}
+footer a:hover{text-decoration:underline}
+@media(max-width:480px){
+  header{padding:2rem 1rem 1.75rem}
+  .form-grid{grid-template-columns:1fr}
+  .result-grid{grid-template-columns:1fr 1fr}
+  .btn-row{flex-direction:column}
+  .btn{width:100%;justify-content:center}
+}
+</style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+<header role="banner">
+  <div class="badge" aria-hidden="true">Crowd Intelligence Platform</div>
+  <h1>SmartFlow <span>AI</span></h1>
+  <p>Real-time crowd analysis and route recommendations for large sporting venues</p>
+</header>
+<main id="main-content">
+  <section aria-labelledby="analysis-heading">
+    <div class="card">
+      <h2 class="card-title" id="analysis-heading">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Crowd Analysis
+      </h2>
+      <form id="crowd-form" novalidate aria-describedby="form-instructions">
+        <p id="form-instructions" class="hint" style="margin-bottom:1rem">
+          Fill in the current conditions at a gate or zone to receive a risk assessment and recommendation.
+        </p>
+        <div class="form-grid">
+          <div class="field">
+            <label for="zone">Zone / Gate Name <span aria-hidden="true">*</span></label>
+            <input type="text" id="zone" name="zone" required
+              placeholder="e.g. Gate A, North Stand"
+              aria-required="true"
+              aria-describedby="zone-hint"
+              maxlength="64" autocomplete="off">
+            <span id="zone-hint" class="hint">Name of the gate or section being analysed</span>
+          </div>
+          <div class="field">
+            <label for="crowd_density">
+              Crowd Density: <span id="density-val" aria-live="polite">50%</span>
+            </label>
+            <input type="range" id="crowd_density" name="crowd_density"
+              min="0" max="100" step="0.5" value="50"
+              aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"
+              aria-describedby="density-hint">
+            <span id="density-hint" class="hint">0 = empty, 100 = fully packed</span>
+          </div>
+          <div class="field">
+            <label for="queue_time_minutes">
+              Queue Wait: <span id="queue-val" aria-live="polite">10 min</span>
+            </label>
+            <input type="range" id="queue_time_minutes" name="queue_time_minutes"
+              min="0" max="480" step="1" value="10"
+              aria-valuemin="0" aria-valuemax="480" aria-valuenow="10"
+              aria-describedby="queue-hint">
+            <span id="queue-hint" class="hint">Estimated wait time in minutes (0–480)</span>
+          </div>
+          <div class="field">
+            <label for="event_phase">Event Phase <span aria-hidden="true">*</span></label>
+            <select id="event_phase" name="event_phase" required
+              aria-required="true" aria-describedby="phase-hint">
+              <option value="pre_match">Pre-Match</option>
+              <option value="live_play" selected>Live Play</option>
+              <option value="halftime">Halftime</option>
+              <option value="post_match">Post-Match</option>
+            </select>
+            <span id="phase-hint" class="hint">Current phase of the sporting event</span>
+          </div>
+          <div class="field">
+            <label for="weather">Weather Condition</label>
+            <select id="weather" name="weather" aria-describedby="weather-hint">
+              <option value="clear" selected>Clear</option>
+              <option value="windy">Windy</option>
+              <option value="hot">Hot</option>
+              <option value="rainy">Rainy</option>
+            </select>
+            <span id="weather-hint" class="hint">Current weather at the venue</span>
+          </div>
+          <div class="field">
+            <label for="nearby_alternatives">Nearby Alternatives</label>
+            <input type="text" id="nearby_alternatives" name="nearby_alternatives"
+              placeholder="Gate B, Gate C"
+              aria-describedby="alt-hint"
+              autocomplete="off">
+            <span id="alt-hint" class="hint">Comma-separated alternate gates — required for route recommendation</span>
+          </div>
+        </div>
+        <div class="checkbox-row" style="margin-top:.75rem">
+          <input type="checkbox" id="special_event" name="special_event"
+            aria-describedby="special-hint">
+          <label for="special_event">Special event in progress</label>
+          <span id="special-hint" class="hint" style="margin-left:.25rem">(goal, penalty, fireworks, etc.)</span>
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary" id="analyze-btn"
+            aria-describedby="analyze-status">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Analyse Conditions
+          </button>
+          <button type="button" class="btn btn-secondary" id="reset-btn">Reset</button>
+        </div>
+        <span id="analyze-status" class="sr-only" aria-live="polite" aria-atomic="true"></span>
+      </form>
+    </div>
+  </section>
+
+  <div id="error-region" role="alert" aria-live="assertive"></div>
+
+  <section id="results-section" class="result-hidden"
+    aria-labelledby="results-heading" aria-live="polite">
+    <div class="card">
+      <h2 class="card-title" id="results-heading">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Analysis Results
+      </h2>
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+        <div id="risk-badge" class="risk-badge" aria-label="Risk level"></div>
+        <div id="congestion-pill" class="congestion-pill"></div>
+      </div>
+      <ul class="result-grid" aria-label="Key metrics">
+        <li class="metric">
+          <div class="metric-val" id="severity-val" aria-label="Severity score">—</div>
+          <div class="metric-label">Severity Score</div>
+        </li>
+        <li class="metric">
+          <div class="metric-val" id="confidence-val" aria-label="Confidence score">—</div>
+          <div class="metric-label">Confidence</div>
+        </li>
+        <li class="metric">
+          <div class="metric-val" id="wait-val" aria-label="Estimated wait reduction">—</div>
+          <div class="metric-label">Est. Wait Reduction</div>
+        </li>
+      </ul>
+      <div class="recommendation-box" id="recommendation-box"
+        aria-label="Recommendation"></div>
+      <h3 style="font-size:.9rem;font-weight:700;color:#374151;margin-top:1rem">
+        Contributing Factors
+      </h3>
+      <ul class="factors-list" id="factors-list" aria-label="Contributing factors"></ul>
+
+      <div id="route-result" class="route-result result-hidden"
+        aria-labelledby="route-heading">
+        <h3 class="card-title" id="route-heading" style="margin-bottom:.75rem;margin-top:1.5rem">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+          Route Recommendation
+        </h3>
+        <ul class="result-grid" aria-label="Route metrics" style="margin-bottom:.75rem">
+          <li class="metric">
+            <div class="metric-val" id="route-gate-val" aria-label="Recommended alternate gate" style="font-size:1.2rem">—</div>
+            <div class="metric-label">Recommended Gate</div>
+          </li>
+          <li class="metric">
+            <div class="metric-val" id="route-wait-val" aria-label="Estimated time saved by rerouting">—</div>
+            <div class="metric-label">Est. Time Saved</div>
+          </li>
+        </ul>
+        <p id="route-status-text" style="margin-bottom:.5rem"></p>
+        <p id="route-recommendation-text" style="font-size:.95rem;margin-bottom:.5rem"></p>
+        <p id="route-reason-text" style="font-size:.875rem;color:#6b7280"></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer role="contentinfo">
+  <p>SmartFlow AI &mdash; Crowd Intelligence for Sporting Venues &nbsp;|&nbsp;
+    <a href="/docs" aria-label="Open API documentation">API Docs</a> &nbsp;|&nbsp;
+    <a href="/health" aria-label="Check service health">Health</a>
+  </p>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var densityInput = document.getElementById("crowd_density");
+  var densityVal   = document.getElementById("density-val");
+  var queueInput   = document.getElementById("queue_time_minutes");
+  var queueVal     = document.getElementById("queue-val");
+  var form         = document.getElementById("crowd-form");
+  var analyzeBtn   = document.getElementById("analyze-btn");
+  var resetBtn     = document.getElementById("reset-btn");
+  var statusEl     = document.getElementById("analyze-status");
+  var errorRegion  = document.getElementById("error-region");
+  var resultsSection = document.getElementById("results-section");
+
+  function updateDensity() {
+    var v = parseFloat(densityInput.value);
+    densityVal.textContent = v + "%";
+    densityInput.setAttribute("aria-valuenow", v);
+  }
+  function updateQueue() {
+    var v = parseInt(queueInput.value, 10);
+    queueVal.textContent = v + " min";
+    queueInput.setAttribute("aria-valuenow", v);
+  }
+  densityInput.addEventListener("input", updateDensity);
+  queueInput.addEventListener("input", updateQueue);
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function showError(msg) {
+    errorRegion.innerHTML =
+      '<div class="error-box">' +
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">' +
+      '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>' +
+      '<line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+      '<span>' + escHtml(msg) + '</span></div>';
+    errorRegion.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+  function clearError() { errorRegion.innerHTML = ""; }
+
+  function setLoading(on) {
+    analyzeBtn.disabled = on;
+    if (on) {
+      analyzeBtn.innerHTML =
+        '<span class="spinner" aria-hidden="true"></span> Analysing&hellip;';
+      statusEl.textContent = "Analysing conditions, please wait.";
+    } else {
+      analyzeBtn.innerHTML =
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">' +
+        '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>' +
+        ' Analyse Conditions';
+      statusEl.textContent = "";
+    }
+  }
+
+  function riskClass(level) {
+    if (level === "high")   return "risk-high";
+    if (level === "medium") return "risk-medium";
+    return "risk-low";
+  }
+  function riskIcon(level) {
+    if (level === "high")   return "\u26A0";
+    if (level === "medium") return "\u25CF";
+    return "\u2713";
+  }
+  function riskLabel(level) {
+    return level.charAt(0).toUpperCase() + level.slice(1) + " Risk";
+  }
+  function routeStatusClass(s) {
+    if (s === "recommended")     return "route-status-recommended";
+    if (s === "no_better_option") return "route-status-no_better_option";
+    return "route-status-clear";
+  }
+  function routeStatusLabel(s) {
+    if (s === "recommended")     return "Alternate route recommended";
+    if (s === "no_better_option") return "No better option available";
+    return "Current route is clear";
+  }
+
+  function renderResults(data, routeData) {
+    var riskBadge = document.getElementById("risk-badge");
+    riskBadge.className = "risk-badge " + riskClass(data.risk_level);
+    riskBadge.innerHTML = riskIcon(data.risk_level) + " " + riskLabel(data.risk_level);
+
+    var cp = document.getElementById("congestion-pill");
+    if (data.predicted_congestion) {
+      cp.className = "congestion-pill congestion-yes";
+      cp.textContent = "Congestion predicted";
+    } else {
+      cp.className = "congestion-pill congestion-no";
+      cp.textContent = "No congestion predicted";
+    }
+
+    document.getElementById("severity-val").textContent =
+      data.severity_score.toFixed(1);
+    document.getElementById("confidence-val").textContent =
+      data.confidence_score.toFixed(1);
+    var wr = data.estimated_wait_reduction_minutes;
+    document.getElementById("wait-val").textContent =
+      wr > 0 ? wr + " min" : "\u2014";
+
+    document.getElementById("recommendation-box").textContent =
+      data.recommendation;
+
+    var fl = document.getElementById("factors-list");
+    fl.innerHTML = "";
+    (data.contributing_factors || []).forEach(function (f) {
+      var li = document.createElement("li");
+      li.textContent = f;
+      fl.appendChild(li);
+    });
+
+    var routeSection = document.getElementById("route-result");
+    if (routeData) {
+      routeSection.classList.remove("result-hidden");
+      var gateVal = document.getElementById("route-gate-val");
+      gateVal.textContent = routeData.alternate_gate || "\u2014";
+      var routeWr = routeData.estimated_wait_reduction_minutes;
+      document.getElementById("route-wait-val").textContent =
+        routeWr > 0 ? routeWr + " min" : "\u2014";
+      var rst = document.getElementById("route-status-text");
+      rst.innerHTML = "Status: <span class=\"" +
+        routeStatusClass(routeData.route_status) + "\">" +
+        routeStatusLabel(routeData.route_status) + "</span>";
+      document.getElementById("route-recommendation-text").textContent =
+        routeData.recommendation;
+      document.getElementById("route-reason-text").textContent =
+        routeData.reason;
+    } else {
+      routeSection.classList.add("result-hidden");
+    }
+
+    resultsSection.classList.remove("result-hidden");
+    resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    statusEl.textContent = "Analysis complete. Results displayed below.";
+  }
+
+  function parseAlternatives(raw) {
+    if (!raw || !raw.trim()) return null;
+    var parts = raw.split(",")
+      .map(function (s) { return s.trim(); })
+      .filter(Boolean);
+    return parts.length > 0 ? parts : null;
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    clearError();
+
+    var zone = document.getElementById("zone").value.trim();
+    if (!zone) {
+      showError("Zone / Gate Name is required.");
+      document.getElementById("zone").focus();
+      return;
+    }
+
+    var density     = parseFloat(densityInput.value);
+    var queue       = parseInt(queueInput.value, 10);
+    var phase       = document.getElementById("event_phase").value;
+    var weather     = document.getElementById("weather").value;
+    var special     = document.getElementById("special_event").checked;
+    var altRaw      = document.getElementById("nearby_alternatives").value;
+    var alternatives = parseAlternatives(altRaw);
+
+    var crowdPayload = {
+      zone: zone,
+      crowd_density: density,
+      queue_time_minutes: queue,
+      event_phase: phase,
+      weather: weather,
+      special_event: special
+    };
+    if (alternatives) crowdPayload.nearby_alternatives = alternatives;
+
+    setLoading(true);
+
+    fetch("/api/v1/analyze-crowd", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify(crowdPayload)
+    })
+    .then(function (resp) {
+      if (!resp.ok) {
+        return resp.json().then(function (err) {
+          var msg = "Analysis failed (HTTP " + resp.status + ").";
+          if (err && err.detail) {
+            msg = Array.isArray(err.detail)
+              ? err.detail.map(function (d) { return d.msg; }).join("; ")
+              : String(err.detail);
+          }
+          throw new Error(msg);
+        });
+      }
+      return resp.json();
+    })
+    .then(function (crowdData) {
+      if (!alternatives || alternatives.length === 0) {
+        renderResults(crowdData, null);
+        setLoading(false);
+        return;
+      }
+      var routePayload = {
+        current_gate: zone,
+        crowd_density: density,
+        queue_time_minutes: queue,
+        event_phase: phase,
+        nearby_alternatives: alternatives
+      };
+      fetch("/api/v1/recommend-route", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify(routePayload)
+      })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; })
+      .then(function (routeData) {
+        renderResults(crowdData, routeData);
+        setLoading(false);
+      });
+    })
+    .catch(function (err) {
+      showError(err.message || "Network error. Please check your connection and try again.");
+      setLoading(false);
+    });
+  });
+
+  resetBtn.addEventListener("click", function () {
+    form.reset();
+    densityInput.value = 50; updateDensity();
+    queueInput.value = 10;   updateQueue();
+    resultsSection.classList.add("result-hidden");
+    clearError();
+    statusEl.textContent = "Form reset.";
+    document.getElementById("zone").focus();
+  });
+}());
+</script>
+</body>
+</html>

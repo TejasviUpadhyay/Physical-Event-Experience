@@ -1,0 +1,34 @@
+# Version control
+.git
+.gitignore
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local environment files — never bake secrets into the image
+.env
+.env.*
+!.env.example
+
+# Test artefacts
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor and OS metadata
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# Documentation
+README.md

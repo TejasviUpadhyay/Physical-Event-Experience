@@ -60,6 +60,10 @@ input[type=range]:focus{box-shadow:none;outline:3px solid var(--primary);outline
 .metric-val{font-size:1.6rem;font-weight:800;color:var(--primary);line-height:1.1}
 .metric-label{font-size:.78rem;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-top:.25rem}
 .recommendation-box{background:var(--primary-light);border-left:4px solid var(--primary);border-radius:0 var(--radius) var(--radius) 0;padding:1rem 1.25rem;margin:1rem 0;font-size:.95rem;color:#1e3a8a;font-weight:500}
+.ai-insight-box{background:#f0fdf4;border-left:4px solid #10b981;border-radius:0 var(--radius) var(--radius) 0;padding:1rem 1.25rem;margin:1rem 0;font-size:.95rem;color:#065f46}
+.ai-insight-header{display:flex;align-items:center;gap:.5rem;font-weight:700;margin-bottom:.5rem;color:#047857}
+.ai-insight-header svg{flex-shrink:0}
+.ai-insight-box p{margin:0;line-height:1.6}
 .factors-list{list-style:none;display:flex;flex-direction:column;gap:.5rem;margin-top:.75rem}
 .factors-list li{display:flex;align-items:flex-start;gap:.5rem;font-size:.9rem;color:#374151}
 .factors-list li::before{content:"•";color:var(--primary);font-weight:700;flex-shrink:0;margin-top:.05rem}
@@ -210,6 +214,15 @@ footer a:hover{text-decoration:underline}
       </ul>
       <div class="recommendation-box" id="recommendation-box"
         aria-label="Recommendation"></div>
+      <div id="ai-insight-box" class="ai-insight-box result-hidden" aria-label="AI Insight">
+        <div class="ai-insight-header">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+          </svg>
+          <span>AI Insight (Powered by Google Gemini)</span>
+        </div>
+        <p id="ai-insight-text"></p>
+      </div>
       <h3 style="font-size:.9rem;font-weight:700;color:#374151;margin-top:1rem">
         Contributing Factors
       </h3>
@@ -234,6 +247,15 @@ footer a:hover{text-decoration:underline}
         <p id="route-status-text" style="margin-bottom:.5rem"></p>
         <p id="route-recommendation-text" style="font-size:.95rem;margin-bottom:.5rem"></p>
         <p id="route-reason-text" style="font-size:.875rem;color:#6b7280"></p>
+        <div id="route-ai-insight-box" class="ai-insight-box result-hidden" aria-label="AI Routing Insight" style="margin-top:1rem">
+          <div class="ai-insight-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+            </svg>
+            <span>AI Routing Insight (Powered by Google Gemini)</span>
+          </div>
+          <p id="route-ai-insight-text"></p>
+        </div>
       </div>
     </div>
   </section>
@@ -356,6 +378,16 @@ footer a:hover{text-decoration:underline}
     document.getElementById("recommendation-box").textContent =
       data.recommendation;
 
+    // Display AI insight if available
+    var aiInsightBox = document.getElementById("ai-insight-box");
+    var aiInsightText = document.getElementById("ai-insight-text");
+    if (data.ai_insight) {
+      aiInsightText.textContent = data.ai_insight;
+      aiInsightBox.classList.remove("result-hidden");
+    } else {
+      aiInsightBox.classList.add("result-hidden");
+    }
+
     var fl = document.getElementById("factors-list");
     fl.innerHTML = "";
     (data.contributing_factors || []).forEach(function (f) {
@@ -380,6 +412,16 @@ footer a:hover{text-decoration:underline}
         routeData.recommendation;
       document.getElementById("route-reason-text").textContent =
         routeData.reason;
+
+      // Display route AI insight if available
+      var routeAiInsightBox = document.getElementById("route-ai-insight-box");
+      var routeAiInsightText = document.getElementById("route-ai-insight-text");
+      if (routeData.ai_insight) {
+        routeAiInsightText.textContent = routeData.ai_insight;
+        routeAiInsightBox.classList.remove("result-hidden");
+      } else {
+        routeAiInsightBox.classList.add("result-hidden");
+      }
     } else {
       routeSection.classList.add("result-hidden");
     }

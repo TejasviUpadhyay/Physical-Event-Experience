@@ -310,6 +310,14 @@ class CrowdAnalysisResponse(BaseModel):
         ...,
         description="Ordered list of human-readable factors that elevated the risk score.",
     )
+    ai_insight: str | None = Field(
+        default=None,
+        description=(
+            "AI-generated operational insight powered by Google Gemini. "
+            "Provides natural language explanation of the situation and actionable guidance. "
+            "Falls back to deterministic explanation if Gemini is unavailable."
+        ),
+    )
     analyzed_at: datetime = Field(
         ...,
         description="UTC datetime of when the analysis was performed.",
@@ -358,6 +366,14 @@ class RouteRecommendationResponse(BaseModel):
     reason: str = Field(
         ...,
         description="Explanation of why this route was recommended or why no change was advised.",
+    )
+    ai_insight: str | None = Field(
+        default=None,
+        description=(
+            "AI-generated routing insight powered by Google Gemini. "
+            "Provides natural language explanation and tactical guidance. "
+            "Falls back to deterministic explanation if Gemini is unavailable."
+        ),
     )
     analyzed_at: datetime = Field(
         ...,

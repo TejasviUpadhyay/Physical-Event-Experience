@@ -83,6 +83,19 @@ class Settings(BaseSettings):
     )
 
     # ------------------------------------------------------------------
+    # Google Gemini AI (Optional)
+    # ------------------------------------------------------------------
+
+    gemini_api_key: str | None = Field(
+        default=None,
+        description=(
+            "Google Gemini API key for AI-powered operational insights. "
+            "If not provided, the system falls back to deterministic explanations. "
+            "Get your API key from: https://makersuite.google.com/app/apikey"
+        ),
+    )
+
+    # ------------------------------------------------------------------
     # Validators
     # ------------------------------------------------------------------
 

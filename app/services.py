@@ -19,6 +19,10 @@ from app.models import (
     WeatherCondition,
 )
 from app.utils import clamp, format_factors, normalize_to_percentage, round_score, utc_now
+from app.gemini_service import (
+    generate_crowd_analysis_insight,
+    generate_route_recommendation_insight,
+)
 
 # ---------------------------------------------------------------------------
 # Scoring weights
@@ -599,6 +603,17 @@ def analyze_crowd_conditions(request: CrowdAnalysisRequest) -> CrowdAnalysisResp
         queue_time_minutes=request.queue_time_minutes,
     )
 
+    # Generate AI-powered operational insight using Google Gemini
+    ai_insight = generate_crowd_analysis_insight(
+        zone=request.zone,
+        risk_level=risk_level,
+        severity_score=severity_score,
+        confidence_score=confidence_score,
+        predicted_congestion=predicted_congestion,
+        contributing_factors=factors,
+        recommendation=recommendation,
+    )
+
     return CrowdAnalysisResponse(
         zone=request.zone,
         risk_level=risk_level,
@@ -608,6 +623,7 @@ def analyze_crowd_conditions(request: CrowdAnalysisRequest) -> CrowdAnalysisResp
         severity_score=severity_score,
         confidence_score=confidence_score,
         contributing_factors=format_factors(factors),
+        ai_insight=ai_insight,
         analyzed_at=utc_now(),
     )
 
@@ -642,6 +658,20 @@ def recommend_alternate_route(request: RouteRecommendationRequest) -> RouteRecom
             has_alternatives=has_alternatives,
             route_status=RouteStatus.CLEAR,
         )
+
+        # Generate AI-powered routing insight using Google Gemini
+        ai_insight = generate_route_recommendation_insight(
+            current_gate=request.current_gate,
+            alternate_gate=None,
+            route_status=RouteStatus.CLEAR,
+            estimated_wait_reduction=0,
+            confidence_score=confidence,
+            reason=(
+                f"Crowd density ({request.crowd_density:.0f}%) and queue time "
+                f"({request.queue_time_minutes} min) are both below rerouting thresholds."
+            ),
+        )
+
         return RouteRecommendationResponse(
             current_gate=request.current_gate,
             alternate_gate=None,
@@ -657,6 +687,7 @@ def recommend_alternate_route(request: RouteRecommendationRequest) -> RouteRecom
                 f"Crowd density ({request.crowd_density:.0f}%) and queue time "
                 f"({request.queue_time_minutes} min) are both below rerouting thresholds."
             ),
+            ai_insight=ai_insight,
             analyzed_at=utc_now(),
         )
 
@@ -667,6 +698,22 @@ def recommend_alternate_route(request: RouteRecommendationRequest) -> RouteRecom
             has_alternatives=False,
             route_status=RouteStatus.NO_BETTER_OPTION,
         )
+
+        # Generate AI-powered routing insight using Google Gemini
+        ai_insight = generate_route_recommendation_insight(
+            current_gate=request.current_gate,
+            alternate_gate=None,
+            route_status=RouteStatus.NO_BETTER_OPTION,
+            estimated_wait_reduction=0,
+            confidence_score=confidence,
+            reason=(
+                f"{request.current_gate} is congested "
+                f"(density {request.crowd_density:.0f}%, "
+                f"queue {request.queue_time_minutes} min) "
+                "but no nearby alternatives were provided."
+            ),
+        )
+
         return RouteRecommendationResponse(
             current_gate=request.current_gate,
             alternate_gate=None,
@@ -684,6 +731,7 @@ def recommend_alternate_route(request: RouteRecommendationRequest) -> RouteRecom
                 f"queue {request.queue_time_minutes} min) "
                 "but no nearby alternatives were provided."
             ),
+            ai_insight=ai_insight,
             analyzed_at=utc_now(),
         )
 
@@ -712,6 +760,23 @@ def recommend_alternate_route(request: RouteRecommendationRequest) -> RouteRecom
         f" en route to {request.destination_zone}" if request.destination_zone else ""
     )
 
+    # Generate AI-powered routing insight using Google Gemini
+    ai_insight = generate_route_recommendation_insight(
+        current_gate=request.current_gate,
+        alternate_gate=recommended_gate,
+        route_status=RouteStatus.RECOMMENDED,
+        estimated_wait_reduction=wait_reduction,
+        confidence_score=confidence,
+        reason=_build_route_congestion_reason(
+            current_gate=request.current_gate,
+            crowd_density=request.crowd_density,
+            queue_time_minutes=request.queue_time_minutes,
+            density_exceeds=density_exceeds,
+            queue_exceeds=queue_exceeds,
+            recommended_gate=recommended_gate,
+        ),
+    )
+
     return RouteRecommendationResponse(
         current_gate=request.current_gate,
         alternate_gate=recommended_gate,
@@ -731,5 +796,6 @@ def recommend_alternate_route(request: RouteRecommendationRequest) -> RouteRecom
             queue_exceeds=queue_exceeds,
             recommended_gate=recommended_gate,
         ),
+        ai_insight=ai_insight,
         analyzed_at=utc_now(),
     )

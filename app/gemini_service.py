@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from typing import Optional
 
 from app.config import get_settings
@@ -95,9 +96,8 @@ def generate_crowd_analysis_insight(
         logger.info(f"Using fallback insight for {zone} - Gemini client not available")
         return (_fallback_crowd_insight(zone, risk_level, predicted_congestion), False)
 
-    try:
-        # Enhanced prompt for more distinctive AI output
-        prompt = f"""You are an expert crowd safety AI assistant for SmartFlow AI, analyzing real-time conditions at a major sporting venue.
+    # Enhanced prompt for more distinctive AI output
+    prompt = f"""You are an expert crowd safety AI assistant for SmartFlow AI, analyzing real-time conditions at a major sporting venue.
 
 **Current Situation:**
 - Location: {zone}
@@ -119,29 +119,45 @@ Provide a 2-3 sentence operational insight for venue operators that:
 
 Be direct, actionable, and specific. Use natural language, not templates. Focus on what operators should DO right now."""
 
-        # Use the new SDK's generate_content method
-        response = client.models.generate_content(
-            model='gemini-flash-latest',
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.7,  # Higher for more variation
-                max_output_tokens=250,
-                top_p=0.95,
-                top_k=40,
+    # Retry logic with exponential backoff
+    max_retries = 3
+    base_delay = 0.5
+    
+    for attempt in range(max_retries):
+        try:
+            # Use the new SDK's generate_content method
+            response = client.models.generate_content(
+                model='gemini-flash-latest',
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.7,  # Higher for more variation
+                    max_output_tokens=250,
+                    top_p=0.95,
+                    top_k=40,
+                )
             )
-        )
 
-        if response and response.text:
-            insight = response.text.strip()
-            logger.info(f"✓ Gemini AI generated insight for {zone} ({risk_level.value}) - {len(insight)} chars")
-            return (insight, True)
+            if response and response.text:
+                insight = response.text.strip()
+                logger.info(f"✓ Gemini AI generated insight for {zone} ({risk_level.value}) - {len(insight)} chars (attempt {attempt + 1})")
+                return (insight, True)
 
-        logger.warning(f"Gemini returned empty response for {zone}")
-        return (_fallback_crowd_insight(zone, risk_level, predicted_congestion), False)
-
-    except Exception as e:
-        logger.error(f"Gemini API call failed for {zone}: {type(e).__name__}: {e}")
-        return (_fallback_crowd_insight(zone, risk_level, predicted_congestion), False)
+            logger.warning(f"Gemini returned empty response for {zone} (attempt {attempt + 1})")
+            
+        except Exception as e:
+            logger.warning(f"Gemini API call failed for {zone} (attempt {attempt + 1}/{max_retries}): {type(e).__name__}: {e}")
+            
+            # If this is not the last attempt, wait before retrying
+            if attempt < max_retries - 1:
+                delay = base_delay * (2 ** attempt)  # Exponential backoff
+                logger.info(f"Retrying in {delay}s...")
+                time.sleep(delay)
+            else:
+                # All retries exhausted
+                logger.error(f"All {max_retries} Gemini API attempts failed for {zone}, using fallback")
+    
+    # Fallback after all retries exhausted
+    return (_fallback_crowd_insight(zone, risk_level, predicted_congestion), False)
 
 
 def generate_route_recommendation_insight(
@@ -176,9 +192,8 @@ def generate_route_recommendation_insight(
         logger.info(f"Using fallback route insight for {current_gate} - Gemini client not available")
         return (_fallback_route_insight(route_status, alternate_gate, estimated_wait_reduction), False)
 
-    try:
-        # Enhanced prompt for more distinctive AI output
-        prompt = f"""You are an expert crowd navigation AI assistant for SmartFlow AI, helping attendees at a major sporting venue.
+    # Enhanced prompt for more distinctive AI output
+    prompt = f"""You are an expert crowd navigation AI assistant for SmartFlow AI, helping attendees at a major sporting venue.
 
 **Current Situation:**
 - Current Location: {current_gate}
@@ -197,29 +212,45 @@ Provide a 2-3 sentence routing insight for attendees that:
 
 Be helpful, conversational, and specific. Use natural language that sounds like a knowledgeable venue guide, not a robot."""
 
-        # Use the new SDK's generate_content method
-        response = client.models.generate_content(
-            model='gemini-flash-latest',
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.7,  # Higher for more variation
-                max_output_tokens=250,
-                top_p=0.95,
-                top_k=40,
+    # Retry logic with exponential backoff
+    max_retries = 3
+    base_delay = 0.5
+    
+    for attempt in range(max_retries):
+        try:
+            # Use the new SDK's generate_content method
+            response = client.models.generate_content(
+                model='gemini-flash-latest',
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.7,  # Higher for more variation
+                    max_output_tokens=250,
+                    top_p=0.95,
+                    top_k=40,
+                )
             )
-        )
 
-        if response and response.text:
-            insight = response.text.strip()
-            logger.info(f"✓ Gemini AI generated route insight for {current_gate} ({route_status.value}) - {len(insight)} chars")
-            return (insight, True)
+            if response and response.text:
+                insight = response.text.strip()
+                logger.info(f"✓ Gemini AI generated route insight for {current_gate} ({route_status.value}) - {len(insight)} chars (attempt {attempt + 1})")
+                return (insight, True)
 
-        logger.warning(f"Gemini returned empty response for {current_gate}")
-        return (_fallback_route_insight(route_status, alternate_gate, estimated_wait_reduction), False)
-
-    except Exception as e:
-        logger.error(f"Gemini API call failed for {current_gate}: {type(e).__name__}: {e}")
-        return (_fallback_route_insight(route_status, alternate_gate, estimated_wait_reduction), False)
+            logger.warning(f"Gemini returned empty response for {current_gate} (attempt {attempt + 1})")
+            
+        except Exception as e:
+            logger.warning(f"Gemini API call failed for {current_gate} (attempt {attempt + 1}/{max_retries}): {type(e).__name__}: {e}")
+            
+            # If this is not the last attempt, wait before retrying
+            if attempt < max_retries - 1:
+                delay = base_delay * (2 ** attempt)  # Exponential backoff
+                logger.info(f"Retrying in {delay}s...")
+                time.sleep(delay)
+            else:
+                # All retries exhausted
+                logger.error(f"All {max_retries} Gemini API attempts failed for {current_gate}, using fallback")
+    
+    # Fallback after all retries exhausted
+    return (_fallback_route_insight(route_status, alternate_gate, estimated_wait_reduction), False)
 
 
 def _fallback_crowd_insight(zone: str, risk_level: RiskLevel, predicted_congestion: bool) -> str:

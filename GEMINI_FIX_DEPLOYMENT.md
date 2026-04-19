@@ -11,7 +11,7 @@
 
 ### ✅ Fix Applied:
 - Migrated to **new** `google-genai` SDK v0.2.2
-- Using `gemini-2.0-flash-exp` model
+- Using `gemini-1.5-flash` model (production-ready, fast, high-quality)
 - Proper error handling and logging
 - Real API call in health check
 - Temperature increased to 0.7 for variation
@@ -182,7 +182,7 @@ export GEMINI_API_KEY=your-key-here
 
 **Solution:**
 - Check Cloud Run logs for actual error messages
-- Verify model name is correct (`gemini-2.0-flash-exp`)
+- Verify model name is correct (`gemini-1.5-flash`)
 - Check quota limits in Google Cloud Console
 
 ---

@@ -119,7 +119,7 @@ The deterministic scoring engine provides **accurate, explainable risk assessmen
 3. **Fail-safe fallback** → No crashes if AI unavailable
 
 **Technical Details:**
-- **Model:** `gemini-2.0-flash-exp` (latest experimental model, fast and high-quality)
+- **Model:** `gemini-1.5-flash` (fast, production-ready model with high quality)
 - **SDK:** `google-genai` v0.2.2 (new official SDK, replaces deprecated google-generativeai)
 - **Temperature:** 0.7 (balanced for natural variation while maintaining accuracy)
 - **Max tokens:** 250 (rich, detailed insights)

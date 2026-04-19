@@ -454,8 +454,8 @@ The UI is built to WCAG 2.1 AA standards:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/smartflow-ai.git
-cd smartflow-ai
+git clone https://github.com/TejasviUpadhyay/Physical-Event-Experience.git
+cd Physical-Event-Experience
 
 # 2. Create and activate a virtual environment
 python -m venv .venv

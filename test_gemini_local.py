@@ -62,7 +62,7 @@ def test_gemini_integration():
     print("🧪 Testing API call...")
     try:
         response = client.models.generate_content(
-            model='gemini-1.5-flash',
+            model='gemini-flash-latest',
             contents="Say 'Hello from SmartFlow AI' in exactly 5 words.",
             config=types.GenerateContentConfig(
                 temperature=0.3,
@@ -88,7 +88,7 @@ def test_gemini_integration():
     for i in range(3):
         try:
             response = client.models.generate_content(
-                model='gemini-1.5-flash',
+                model='gemini-flash-latest',
                 contents="Explain crowd congestion at a stadium gate in one sentence.",
                 config=types.GenerateContentConfig(
                     temperature=0.7,

@@ -121,7 +121,7 @@ Be direct, actionable, and specific. Use natural language, not templates. Focus 
 
         # Use the new SDK's generate_content method
         response = client.models.generate_content(
-            model='gemini-1.5-flash',
+            model='gemini-flash-latest',
             contents=prompt,
             config=types.GenerateContentConfig(
                 temperature=0.7,  # Higher for more variation
@@ -199,7 +199,7 @@ Be helpful, conversational, and specific. Use natural language that sounds like 
 
         # Use the new SDK's generate_content method
         response = client.models.generate_content(
-            model='gemini-1.5-flash',
+            model='gemini-flash-latest',
             contents=prompt,
             config=types.GenerateContentConfig(
                 temperature=0.7,  # Higher for more variation
@@ -316,7 +316,7 @@ def test_gemini_connection() -> dict:
         # Perform actual API call test
         from google.genai import types
         response = client.models.generate_content(
-            model='gemini-1.5-flash',
+            model='gemini-flash-latest',
             contents="Say 'Hello from SmartFlow AI' in exactly 5 words.",
             config=types.GenerateContentConfig(
                 temperature=0.3,

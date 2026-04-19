@@ -282,6 +282,39 @@ def _build_root_router() -> APIRouter:
             timestamp=utc_now_iso(),
         )
 
+    @router.get(
+        "/health/gemini",
+        summary="Gemini AI health check",
+        response_description="Verifies Google Gemini AI integration status with real API call.",
+        include_in_schema=True,
+    )
+    async def gemini_health() -> dict:
+        """Check if Google Gemini AI is properly configured and accessible.
+
+        Performs a REAL API call to verify the integration is working.
+        This endpoint helps verify that AI-powered insights are active.
+        """
+        from app.gemini_service import test_gemini_connection
+        from app.utils import utc_now_iso
+        
+        test_result = test_gemini_connection()
+        
+        # Determine overall status
+        if test_result["api_call_successful"] and test_result["response_received"]:
+            status = "operational"
+        elif test_result["client_created"]:
+            status = "client_ready_but_api_failed"
+        elif test_result["api_key_configured"]:
+            status = "api_key_set_but_client_failed"
+        else:
+            status = "fallback_mode"
+        
+        return {
+            **test_result,
+            "status": status,
+            "timestamp": utc_now_iso(),
+        }
+
     return router
 
 

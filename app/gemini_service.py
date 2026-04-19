@@ -4,14 +4,13 @@ Google Gemini AI integration for SmartFlow AI.
 Provides AI-powered operational insights that enhance the deterministic
 scoring system with natural language explanations and tactical guidance.
 
-The integration is fail-safe: if Gemini is unavailable or the API key is
-missing, the system falls back to deterministic explanations without
-degrading functionality.
+Uses the NEW google-genai SDK (not the deprecated google-generativeai).
 """
 
 from __future__ import annotations
 
 import logging
+import os
 from typing import Optional
 
 from app.config import get_settings
@@ -19,38 +18,46 @@ from app.models import RiskLevel, RouteStatus
 
 logger = logging.getLogger(__name__)
 
-# Lazy import to avoid startup failure if google-generativeai is not installed
+# Lazy import to avoid startup failure if google-genai is not installed
 _gemini_available = False
-_genai = None
+_genai_client = None
 
 try:
-    import google.generativeai as genai
-    _genai = genai
+    from google import genai
+    from google.genai import types
     _gemini_available = True
-except ImportError:
-    logger.warning("google-generativeai not installed. AI insights will use fallback mode.")
+    logger.info("✓ Google Gemini SDK (google-genai) loaded successfully")
+except ImportError as e:
+    logger.warning(f"google-genai not installed: {e}. AI insights will use fallback mode.")
 
 
-def _initialize_gemini() -> bool:
-    """Initialize Gemini API with the configured API key.
-
+def _get_gemini_client():
+    """Get or create the Gemini client instance.
+    
     Returns:
-        True if initialization succeeded, False otherwise.
+        Configured Gemini client or None if unavailable.
     """
+    global _genai_client
+    
     if not _gemini_available:
-        return False
-
+        logger.warning("Gemini SDK not available")
+        return None
+    
     settings = get_settings()
     if not settings.gemini_api_key:
-        logger.info("GEMINI_API_KEY not configured. AI insights will use fallback mode.")
-        return False
-
-    try:
-        _genai.configure(api_key=settings.gemini_api_key)
-        return True
-    except Exception as e:
-        logger.warning(f"Failed to initialize Gemini API: {e}. Using fallback mode.")
-        return False
+        logger.warning("GEMINI_API_KEY not configured. AI insights will use fallback mode.")
+        return None
+    
+    # Create client if not exists or if API key changed
+    if _genai_client is None:
+        try:
+            _genai_client = genai.Client(api_key=settings.gemini_api_key)
+            logger.info("✓ Gemini client initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to create Gemini client: {type(e).__name__}: {e}")
+            return None
+    
+    return _genai_client
 
 
 def generate_crowd_analysis_insight(
@@ -61,7 +68,7 @@ def generate_crowd_analysis_insight(
     predicted_congestion: bool,
     contributing_factors: list[str],
     recommendation: str,
-) -> str:
+) -> tuple[str, bool]:
     """Generate AI-powered operational insight for crowd analysis.
 
     Uses Google Gemini to produce a natural language explanation that
@@ -78,54 +85,63 @@ def generate_crowd_analysis_insight(
         recommendation: Deterministic recommendation text.
 
     Returns:
-        AI-generated insight string. Falls back to deterministic explanation
-        if Gemini is unavailable.
+        Tuple of (insight_text, was_ai_powered).
+        - insight_text: AI-generated or fallback insight string
+        - was_ai_powered: True if Gemini was used, False if fallback
     """
-    if not _initialize_gemini():
-        return _fallback_crowd_insight(zone, risk_level, predicted_congestion)
+    client = _get_gemini_client()
+    
+    if client is None:
+        logger.info(f"Using fallback insight for {zone} - Gemini client not available")
+        return (_fallback_crowd_insight(zone, risk_level, predicted_congestion), False)
 
     try:
-        model = _genai.GenerativeModel("gemini-1.5-flash")
+        # Enhanced prompt for more distinctive AI output
+        prompt = f"""You are an expert crowd safety AI assistant for SmartFlow AI, analyzing real-time conditions at a major sporting venue.
 
-        prompt = f"""You are an AI assistant for SmartFlow AI, a crowd intelligence system for sporting venues.
+**Current Situation:**
+- Location: {zone}
+- Risk Level: {risk_level.value.upper()}
+- Severity Score: {severity_score:.1f}/100
+- Confidence: {confidence_score:.1f}%
+- Congestion Forecast: {"WORSENING" if predicted_congestion else "STABLE"}
 
-Analyze this crowd situation and provide a concise operational insight (2-3 sentences max):
+**Key Factors:**
+{chr(10).join(f"• {factor}" for factor in contributing_factors)}
 
-Zone: {zone}
-Risk Level: {risk_level.value.upper()}
-Severity Score: {severity_score:.1f}/100
-Confidence: {confidence_score:.1f}%
-Congestion Predicted: {"Yes" if predicted_congestion else "No"}
-Contributing Factors:
-{chr(10).join(f"- {factor}" for factor in contributing_factors)}
+**System Assessment:** {recommendation}
 
-System Recommendation: {recommendation}
+**Your Task:**
+Provide a 2-3 sentence operational insight for venue operators that:
+1. Explains the current situation in clear, professional language
+2. Highlights the most critical operational concern
+3. Suggests specific tactical actions (e.g., deploy staff, redirect crowds, activate protocols)
 
-Provide a clear, actionable insight for venue operators. Focus on:
-1. What's happening right now
-2. Why it matters operationally
-3. What action to take (if any)
+Be direct, actionable, and specific. Use natural language, not templates. Focus on what operators should DO right now."""
 
-Keep it professional, concise, and tactical. Do not repeat the recommendation verbatim."""
-
-        response = model.generate_content(
-            prompt,
-            generation_config={
-                "temperature": 0.3,  # Low temperature for consistent, factual output
-                "max_output_tokens": 150,
-            },
+        # Use the new SDK's generate_content method
+        response = client.models.generate_content(
+            model='gemini-2.0-flash-exp',
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.7,  # Higher for more variation
+                max_output_tokens=250,
+                top_p=0.95,
+                top_k=40,
+            )
         )
 
         if response and response.text:
             insight = response.text.strip()
-            logger.info(f"Generated Gemini insight for {zone} ({risk_level.value})")
-            return insight
+            logger.info(f"✓ Gemini AI generated insight for {zone} ({risk_level.value}) - {len(insight)} chars")
+            return (insight, True)
 
-        return _fallback_crowd_insight(zone, risk_level, predicted_congestion)
+        logger.warning(f"Gemini returned empty response for {zone}")
+        return (_fallback_crowd_insight(zone, risk_level, predicted_congestion), False)
 
     except Exception as e:
-        logger.warning(f"Gemini API call failed: {e}. Using fallback.")
-        return _fallback_crowd_insight(zone, risk_level, predicted_congestion)
+        logger.error(f"Gemini API call failed for {zone}: {type(e).__name__}: {e}")
+        return (_fallback_crowd_insight(zone, risk_level, predicted_congestion), False)
 
 
 def generate_route_recommendation_insight(
@@ -135,7 +151,7 @@ def generate_route_recommendation_insight(
     estimated_wait_reduction: int,
     confidence_score: float,
     reason: str,
-) -> str:
+) -> tuple[str, bool]:
     """Generate AI-powered operational insight for route recommendation.
 
     Uses Google Gemini to produce a natural language explanation that
@@ -150,51 +166,60 @@ def generate_route_recommendation_insight(
         reason: Deterministic reason text.
 
     Returns:
-        AI-generated insight string. Falls back to deterministic explanation
-        if Gemini is unavailable.
+        Tuple of (insight_text, was_ai_powered).
+        - insight_text: AI-generated or fallback insight string
+        - was_ai_powered: True if Gemini was used, False if fallback
     """
-    if not _initialize_gemini():
-        return _fallback_route_insight(route_status, alternate_gate, estimated_wait_reduction)
+    client = _get_gemini_client()
+    
+    if client is None:
+        logger.info(f"Using fallback route insight for {current_gate} - Gemini client not available")
+        return (_fallback_route_insight(route_status, alternate_gate, estimated_wait_reduction), False)
 
     try:
-        model = _genai.GenerativeModel("gemini-1.5-flash")
+        # Enhanced prompt for more distinctive AI output
+        prompt = f"""You are an expert crowd navigation AI assistant for SmartFlow AI, helping attendees at a major sporting venue.
 
-        prompt = f"""You are an AI assistant for SmartFlow AI, a crowd intelligence system for sporting venues.
+**Current Situation:**
+- Current Location: {current_gate}
+- Recommended Alternative: {alternate_gate or "None available"}
+- Route Status: {route_status.value.upper().replace('_', ' ')}
+- Potential Time Savings: {estimated_wait_reduction} minutes
+- Confidence: {confidence_score:.1f}%
 
-Analyze this routing situation and provide a concise tactical insight (2-3 sentences max):
+**Analysis:** {reason}
 
-Current Gate: {current_gate}
-Alternate Gate: {alternate_gate or "None"}
-Route Status: {route_status.value.upper()}
-Estimated Time Savings: {estimated_wait_reduction} minutes
-Confidence: {confidence_score:.1f}%
-Reason: {reason}
+**Your Task:**
+Provide a 2-3 sentence routing insight for attendees that:
+1. Explains the routing decision in friendly, clear language
+2. Highlights the key benefit or reason for the recommendation
+3. Gives specific next steps (e.g., "Head to Gate B now", "Stay on current path", "Allow extra time")
 
-Provide a clear, actionable insight for attendees. Focus on:
-1. What the routing decision means
-2. Why it's the right choice
-3. What to do next
+Be helpful, conversational, and specific. Use natural language that sounds like a knowledgeable venue guide, not a robot."""
 
-Keep it friendly, concise, and helpful. Do not repeat the reason verbatim."""
-
-        response = model.generate_content(
-            prompt,
-            generation_config={
-                "temperature": 0.3,
-                "max_output_tokens": 150,
-            },
+        # Use the new SDK's generate_content method
+        response = client.models.generate_content(
+            model='gemini-2.0-flash-exp',
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.7,  # Higher for more variation
+                max_output_tokens=250,
+                top_p=0.95,
+                top_k=40,
+            )
         )
 
         if response and response.text:
             insight = response.text.strip()
-            logger.info(f"Generated Gemini route insight for {current_gate} ({route_status.value})")
-            return insight
+            logger.info(f"✓ Gemini AI generated route insight for {current_gate} ({route_status.value}) - {len(insight)} chars")
+            return (insight, True)
 
-        return _fallback_route_insight(route_status, alternate_gate, estimated_wait_reduction)
+        logger.warning(f"Gemini returned empty response for {current_gate}")
+        return (_fallback_route_insight(route_status, alternate_gate, estimated_wait_reduction), False)
 
     except Exception as e:
-        logger.warning(f"Gemini API call failed: {e}. Using fallback.")
-        return _fallback_route_insight(route_status, alternate_gate, estimated_wait_reduction)
+        logger.error(f"Gemini API call failed for {current_gate}: {type(e).__name__}: {e}")
+        return (_fallback_route_insight(route_status, alternate_gate, estimated_wait_reduction), False)
 
 
 def _fallback_crowd_insight(zone: str, risk_level: RiskLevel, predicted_congestion: bool) -> str:
@@ -208,7 +233,7 @@ def _fallback_crowd_insight(zone: str, risk_level: RiskLevel, predicted_congesti
         predicted_congestion: Whether congestion is predicted.
 
     Returns:
-        Deterministic insight string.
+        Deterministic insight string with clear fallback indicator.
     """
     if risk_level == RiskLevel.HIGH:
         base = f"{zone} is experiencing high congestion risk requiring immediate intervention."
@@ -218,9 +243,9 @@ def _fallback_crowd_insight(zone: str, risk_level: RiskLevel, predicted_congesti
         base = f"{zone} is operating normally with low congestion risk."
 
     if predicted_congestion:
-        return f"{base} Conditions are expected to worsen, so early action is recommended."
+        return f"[Deterministic Analysis] {base} Conditions are expected to worsen, so early action is recommended."
 
-    return f"{base} Continue standard operations and monitor for changes."
+    return f"[Deterministic Analysis] {base} Continue standard operations and monitor for changes."
 
 
 def _fallback_route_insight(
@@ -238,17 +263,75 @@ def _fallback_route_insight(
         estimated_wait_reduction: Estimated time savings in minutes.
 
     Returns:
-        Deterministic insight string.
+        Deterministic insight string with clear fallback indicator.
     """
     if route_status == RouteStatus.RECOMMENDED and alternate_gate:
         return (
-            f"Rerouting to {alternate_gate} is recommended to save approximately "
+            f"[Deterministic Analysis] Rerouting to {alternate_gate} is recommended to save approximately "
             f"{estimated_wait_reduction} minutes and avoid congestion."
         )
     elif route_status == RouteStatus.NO_BETTER_OPTION:
         return (
-            "No alternate routes are currently available. "
+            "[Deterministic Analysis] No alternate routes are currently available. "
             "Proceed with your current route and allow extra time."
         )
     else:
-        return "Your current route is clear. Continue as planned with normal wait times expected."
+        return "[Deterministic Analysis] Your current route is clear. Continue as planned with normal wait times expected."
+
+
+def test_gemini_connection() -> dict:
+    """Test Gemini API connection with a real API call.
+    
+    Returns:
+        Dictionary with test results including success status and any errors.
+    """
+    result = {
+        "sdk_available": _gemini_available,
+        "api_key_configured": False,
+        "client_created": False,
+        "api_call_successful": False,
+        "response_received": False,
+        "error": None,
+    }
+    
+    settings = get_settings()
+    result["api_key_configured"] = bool(settings.gemini_api_key)
+    
+    if not _gemini_available:
+        result["error"] = "google-genai SDK not installed"
+        return result
+    
+    if not settings.gemini_api_key:
+        result["error"] = "GEMINI_API_KEY environment variable not set"
+        return result
+    
+    try:
+        client = _get_gemini_client()
+        if client is None:
+            result["error"] = "Failed to create Gemini client"
+            return result
+        
+        result["client_created"] = True
+        
+        # Perform actual API call test
+        from google.genai import types
+        response = client.models.generate_content(
+            model='gemini-2.0-flash-exp',
+            contents="Say 'Hello from SmartFlow AI' in exactly 5 words.",
+            config=types.GenerateContentConfig(
+                temperature=0.3,
+                max_output_tokens=50,
+            )
+        )
+        
+        result["api_call_successful"] = True
+        
+        if response and response.text:
+            result["response_received"] = True
+            result["sample_response"] = response.text.strip()[:100]
+        
+    except Exception as e:
+        result["error"] = f"{type(e).__name__}: {str(e)}"
+        logger.error(f"Gemini connection test failed: {result['error']}")
+    
+    return result

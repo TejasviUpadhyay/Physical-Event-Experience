@@ -604,7 +604,7 @@ def analyze_crowd_conditions(request: CrowdAnalysisRequest) -> CrowdAnalysisResp
     )
 
     # Generate AI-powered operational insight using Google Gemini
-    ai_insight = generate_crowd_analysis_insight(
+    ai_insight, ai_powered = generate_crowd_analysis_insight(
         zone=request.zone,
         risk_level=risk_level,
         severity_score=severity_score,
@@ -624,6 +624,7 @@ def analyze_crowd_conditions(request: CrowdAnalysisRequest) -> CrowdAnalysisResp
         confidence_score=confidence_score,
         contributing_factors=format_factors(factors),
         ai_insight=ai_insight,
+        ai_powered=ai_powered,
         analyzed_at=utc_now(),
     )
 
@@ -660,7 +661,7 @@ def recommend_alternate_route(request: RouteRecommendationRequest) -> RouteRecom
         )
 
         # Generate AI-powered routing insight using Google Gemini
-        ai_insight = generate_route_recommendation_insight(
+        ai_insight, ai_powered = generate_route_recommendation_insight(
             current_gate=request.current_gate,
             alternate_gate=None,
             route_status=RouteStatus.CLEAR,
@@ -688,6 +689,7 @@ def recommend_alternate_route(request: RouteRecommendationRequest) -> RouteRecom
                 f"({request.queue_time_minutes} min) are both below rerouting thresholds."
             ),
             ai_insight=ai_insight,
+            ai_powered=ai_powered,
             analyzed_at=utc_now(),
         )
 
@@ -700,7 +702,7 @@ def recommend_alternate_route(request: RouteRecommendationRequest) -> RouteRecom
         )
 
         # Generate AI-powered routing insight using Google Gemini
-        ai_insight = generate_route_recommendation_insight(
+        ai_insight, ai_powered = generate_route_recommendation_insight(
             current_gate=request.current_gate,
             alternate_gate=None,
             route_status=RouteStatus.NO_BETTER_OPTION,
@@ -732,6 +734,7 @@ def recommend_alternate_route(request: RouteRecommendationRequest) -> RouteRecom
                 "but no nearby alternatives were provided."
             ),
             ai_insight=ai_insight,
+            ai_powered=ai_powered,
             analyzed_at=utc_now(),
         )
 
@@ -761,7 +764,7 @@ def recommend_alternate_route(request: RouteRecommendationRequest) -> RouteRecom
     )
 
     # Generate AI-powered routing insight using Google Gemini
-    ai_insight = generate_route_recommendation_insight(
+    ai_insight, ai_powered = generate_route_recommendation_insight(
         current_gate=request.current_gate,
         alternate_gate=recommended_gate,
         route_status=RouteStatus.RECOMMENDED,
@@ -797,5 +800,6 @@ def recommend_alternate_route(request: RouteRecommendationRequest) -> RouteRecom
             recommended_gate=recommended_gate,
         ),
         ai_insight=ai_insight,
+        ai_powered=ai_powered,
         analyzed_at=utc_now(),
     )

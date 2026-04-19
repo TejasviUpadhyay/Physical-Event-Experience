@@ -309,7 +309,7 @@ The backend exposes two core capabilities:
 ## Project Structure
 
 ```
-smartflow-ai/
+Physical-Event-Experience/
 ├── app/
 │   ├── __init__.py
 │   ├── main.py          # FastAPI app factory, middleware, routes, UI serving
@@ -500,7 +500,7 @@ pytest tests/ -v --cov=app --cov-report=term-missing
 
 **Build**
 ```bash
-docker build -t smartflow-ai .
+docker build -t physical-event-experience .
 ```
 
 **Run locally**
@@ -508,7 +508,7 @@ docker build -t smartflow-ai .
 docker run --rm -p 8080:8080 \
   -e DEBUG=false \
   -e LOG_LEVEL=INFO \
-  smartflow-ai
+  physical-event-experience
 ```
 
 The service will be available at `http://localhost:8080`.
@@ -523,14 +523,14 @@ The service will be available at `http://localhost:8080`.
 # 1. Set your project and region
 export PROJECT_ID=your-gcp-project-id
 export REGION=us-central1
-export IMAGE=gcr.io/$PROJECT_ID/smartflow-ai
+export IMAGE=gcr.io/$PROJECT_ID/physical-event-experience
 
 # 2. Build and push the container image
 docker build -t $IMAGE .
 docker push $IMAGE
 
 # 3. Deploy to Cloud Run
-gcloud run deploy smartflow-ai \
+gcloud run deploy physical-event-experience \
   --image $IMAGE \
   --platform managed \
   --region $REGION \
@@ -542,7 +542,7 @@ Cloud Run automatically injects the `PORT` environment variable. The container r
 
 To update environment variables after deployment:
 ```bash
-gcloud run services update smartflow-ai \
+gcloud run services update physical-event-experience \
   --region $REGION \
   --set-env-vars "ALLOWED_ORIGINS=https://your-dashboard.example.com"
 ```

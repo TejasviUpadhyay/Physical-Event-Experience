@@ -121,7 +121,7 @@ Be direct, actionable, and specific. Use natural language, not templates. Focus 
 
         # Use the new SDK's generate_content method
         response = client.models.generate_content(
-            model='gemini-2.0-flash-exp',
+            model='gemini-1.5-flash',
             contents=prompt,
             config=types.GenerateContentConfig(
                 temperature=0.7,  # Higher for more variation
